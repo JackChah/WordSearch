@@ -42,18 +42,14 @@ chrome.storage.session.get(["results", "term", "url", "matchType", "scanMode", "
 });
 
 // ─── "Use current tab" toggle ─────────────────────────────────────────────────
-useCurrentTab.addEventListener("change", () => {
-  if (!useCurrentTab.checked) return;
+useCurrentTab.addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (!tab?.url) return;
     try {
       const u = new URL(tab.url);
-      // Populate with just the origin so we scan the whole site, not one page
       urlInput.value = u.origin + "/";
     } catch (_) {}
-    // Uncheck after filling — it's a one-shot action, not a persistent lock
-    useCurrentTab.checked = false;
   });
 });
 
