@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "WordSearch — Site-Wide Text Finder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Scan any website for a word or phrase across all linked pages. Free alternative to Screaming Frog for copy audits.",
 
   "permissions": [

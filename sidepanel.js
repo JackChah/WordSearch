@@ -13,6 +13,7 @@ const resultsSummary = document.getElementById("results-summary");
 const resultsList    = document.getElementById("results-list");
 const cancelBtn      = document.getElementById("cancel-btn");
 const useCurrentTab  = document.getElementById("use-current-tab");
+const clearBtn       = document.getElementById("clear-btn");
 const exportActions  = document.getElementById("export-actions");
 const sheetsBtn      = document.getElementById("sheets-btn");
 const exportBtn      = document.getElementById("export-btn");
@@ -113,6 +114,13 @@ function startSearch() {
   port.postMessage({ type: "START_SEARCH", payload: { rootUrl, term, matchType, scanMode } });
 }
 
+// ─── Clear button ─────────────────────────────────────────────────────────────
+clearBtn.addEventListener("click", () => {
+  urlInput.value = "";
+  termInput.value = "";
+  resetUI();
+});
+
 // ─── Cancel button ────────────────────────────────────────────────────────────
 cancelBtn.addEventListener("click", () => {
   if (port) { try { port.disconnect(); } catch (_) {} port = null; }
@@ -203,6 +211,7 @@ function renderResults(results, term) {
   });
 
   show(resultsSection);
+  show(clearBtn);
   show(exportActions);
 }
 
@@ -331,6 +340,7 @@ function persistResults() {
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 function resetUI() {
   hide(resultsSection);
+  hide(clearBtn);
   hide(exportActions);
   hide(emptyState);
   hide(errorState);
