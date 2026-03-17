@@ -18,7 +18,14 @@
 
       <!-- ── Inputs ── -->
       <div class="field">
-        <label for="url-input">Website URL</label>
+        <div class="field-label-row">
+          <label for="url-input">Website URL</label>
+          <label class="toggle-label" title="Fill with the URL of the current browser tab">
+            <input type="checkbox" id="use-current-tab" class="toggle-checkbox" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-text">Use current tab</span>
+          </label>
+        </div>
         <input
           id="url-input"
           type="url"
@@ -47,6 +54,15 @@
         </select>
       </div>
 
+      <div class="field">
+        <label for="scan-mode">Scan mode</label>
+        <select id="scan-mode">
+          <option value="sitemap">Full site — sitemap (all pages)</option>
+          <option value="nav">Main pages only — nav &amp; header links</option>
+        </select>
+        <p id="scan-mode-hint" class="field-hint">Uses sitemap.xml to find all pages on the site.</p>
+      </div>
+
       <button id="search-btn" class="btn-primary">Search</button>
 
       <!-- ── Progress ── -->
@@ -54,7 +70,10 @@
         <div class="progress-bar-wrap">
           <div id="progress-bar" class="progress-bar"></div>
         </div>
-        <p id="progress-text" class="progress-text">Starting…</p>
+        <div class="progress-footer">
+          <p id="progress-text" class="progress-text">Starting…</p>
+          <button id="cancel-btn" class="btn-cancel">Cancel</button>
+        </div>
       </div>
 
       <!-- ── Results ── -->
@@ -67,8 +86,6 @@
             <button id="export-btn" class="btn-export">CSV</button>
           </div>
         </div>
-
-        <div id="sheets-toast" class="sheets-toast hidden">Copied! Paste into the new Sheet (Ctrl+V / ⌘V)</div>
 
         <div id="results-list" class="results-list"></div>
 

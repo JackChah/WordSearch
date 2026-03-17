@@ -5,29 +5,33 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 // Using a persistent port keeps the MV3 service worker alive for the full crawl.
 // A one-shot sendMessage allows Chrome to terminate the worker mid-search.
 let activePort = null;
+let cancelled  = false;
 
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== "wordsearch") return;
   activePort = port;
+  cancelled  = false;
 
   port.onMessage.addListener((msg) => {
     if (msg.type === "START_SEARCH") {
+      cancelled = false;
       runSearch(msg.payload).catch((e) => postError(e.message));
     }
   });
 
   port.onDisconnect.addListener(() => {
+    cancelled  = true;
     activePort = null;
   });
 });
 
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
-async function runSearch({ rootUrl, term, matchType }) {
+async function runSearch({ rootUrl, term, matchType, scanMode = "sitemap" }) {
   postStatus("Discovering pages…", 0, 0);
 
   let urls;
   try {
-    urls = await discoverUrls(rootUrl);
+    urls = await discoverUrls(rootUrl, scanMode);
   } catch (e) {
     postError(`Page discovery failed: ${e.message}`);
     return;
@@ -40,6 +44,7 @@ async function runSearch({ rootUrl, term, matchType }) {
   const CONCURRENCY = 4;
 
   for (let i = 0; i < urls.length; i += CONCURRENCY) {
+    if (cancelled) return; // user hit Cancel — stop immediately
     const batch = urls.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.all(
       batch.map((url) => searchPage(url, term, matchType))
@@ -48,17 +53,23 @@ async function runSearch({ rootUrl, term, matchType }) {
     postStatus(`Checked ${Math.min(i + CONCURRENCY, urls.length)} of ${urls.length} pages…`, i + CONCURRENCY, urls.length);
   }
 
-  postResults(results);
+  if (!cancelled) postResults(results);
 }
 
 // ─── Page discovery ──────────────────────────────────────────────────────────
 
-async function discoverUrls(rootUrl) {
+async function discoverUrls(rootUrl, scanMode = "sitemap") {
   const origin = new URL(rootUrl).origin;
+
+  if (scanMode === "nav") {
+    // User chose "main pages only" — skip sitemap entirely
+    return await navFallback(rootUrl, origin);
+  }
+
+  // Full site: try sitemap first, fall back to nav if not found
   const sitemapUrls = await trySitemap(origin);
   if (sitemapUrls) return sitemapUrls;
 
-  // Fallback: scrape nav/header links from the homepage
   return await navFallback(rootUrl, origin);
 }
 
@@ -234,10 +245,10 @@ function findMatches(text, term, matchType) {
   const count = allMatches.length;
   if (!count) return { count: 0, snippets: [] };
 
-  // Up to 3 snippets with ~60 chars of surrounding context
+  // Up to 3 snippets with ~35 chars of surrounding context
   const snippets = allMatches.slice(0, 3).map(({ index }) => {
-    const start = Math.max(0, index - 60);
-    const end = Math.min(text.length, index + term.length + 60);
+    const start = Math.max(0, index - 35);
+    const end = Math.min(text.length, index + term.length + 35);
     let snippet = text.slice(start, end).trim();
     if (start > 0) snippet = "…" + snippet;
     if (end < text.length) snippet = snippet + "…";

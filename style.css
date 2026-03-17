@@ -86,6 +86,74 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+/* ── Field label row (label + inline toggle) ─────────────────────────────── */
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-track {
+  width: 26px;
+  height: 14px;
+  background: #d1d5db;
+  border-radius: 99px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.toggle-checkbox:checked + .toggle-track {
+  background: #1e40af;
+}
+
+.toggle-checkbox:checked + .toggle-track .toggle-thumb {
+  transform: translateX(12px);
+}
+
+.toggle-text {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Field hint ───────────────────────────────────────────────────────────── */
+.field-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
 /* ── Buttons ──────────────────────────────────────────────────────────────── */
 .btn-primary {
   width: 100%;
@@ -187,9 +255,34 @@ select:focus {
   transition: width 0.3s ease;
 }
 
+.progress-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .progress-text {
   font-size: 11px;
   color: #6b7280;
+}
+
+.btn-cancel {
+  padding: 3px 10px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #fca5a5;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-cancel:hover {
+  background: #fee2e2;
 }
 
 /* ── Results ──────────────────────────────────────────────────────────────── */
@@ -267,13 +360,13 @@ select:focus {
 }
 
 .snippet {
-  font-size: 12px;
-  color: #4b5563;
+  font-size: 11px;
+  color: #6b7280;
   background: #fff;
-  border-left: 3px solid #bfdbfe;
-  padding: 4px 8px;
-  border-radius: 0 4px 4px 0;
-  line-height: 1.5;
+  border-left: 2px solid #bfdbfe;
+  padding: 2px 6px;
+  border-radius: 0 3px 3px 0;
+  line-height: 1.4;
   word-break: break-word;
 }
 

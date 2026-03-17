@@ -8,8 +8,14 @@
     "sidePanel",
     "storage",
     "tabs",
-    "clipboardWrite"
+    "clipboardWrite",
+    "identity"
   ],
+
+  "oauth2": {
+    "client_id": "784500115295-s07jtulk85qsek4mi1kci27cnkknjshj.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/spreadsheets"]
+  },
 
   "content_security_policy": {
     "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src *;"

@@ -2,6 +2,8 @@
 const urlInput       = document.getElementById("url-input");
 const termInput      = document.getElementById("term-input");
 const matchTypeEl    = document.getElementById("match-type");
+const scanModeEl     = document.getElementById("scan-mode");
+const scanModeHint   = document.getElementById("scan-mode-hint");
 const searchBtn      = document.getElementById("search-btn");
 const progressSection = document.getElementById("progress-section");
 const progressBar    = document.getElementById("progress-bar");
@@ -9,9 +11,10 @@ const progressText   = document.getElementById("progress-text");
 const resultsSection = document.getElementById("results-section");
 const resultsSummary = document.getElementById("results-summary");
 const resultsList    = document.getElementById("results-list");
+const cancelBtn      = document.getElementById("cancel-btn");
+const useCurrentTab  = document.getElementById("use-current-tab");
 const exportActions  = document.getElementById("export-actions");
 const sheetsBtn      = document.getElementById("sheets-btn");
-const sheetsToast    = document.getElementById("sheets-toast");
 const exportBtn      = document.getElementById("export-btn");
 const emptyState     = document.getElementById("empty-state");
 const errorState     = document.getElementById("error-state");
@@ -24,16 +27,43 @@ let lastDomain = "";
 let port = null; // persistent connection keeps the MV3 service worker alive
 
 // ─── Restore persisted results on open ───────────────────────────────────────
-chrome.storage.session.get(["results", "term", "url", "matchType", "domain"], (stored) => {
+chrome.storage.session.get(["results", "term", "url", "matchType", "scanMode", "domain"], (stored) => {
   if (stored.results?.length) {
     urlInput.value = stored.url || "";
     termInput.value = stored.term || "";
     matchTypeEl.value = stored.matchType || "case-insensitive";
+    scanModeEl.value = stored.scanMode || "sitemap";
+    scanModeHint.textContent = SCAN_HINTS[scanModeEl.value];
     lastTerm = stored.term || "";
     lastDomain = stored.domain || "";
     currentResults = stored.results;
     renderResults(stored.results, stored.term);
   }
+});
+
+// ─── "Use current tab" toggle ─────────────────────────────────────────────────
+useCurrentTab.addEventListener("change", () => {
+  if (!useCurrentTab.checked) return;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab?.url) return;
+    try {
+      const u = new URL(tab.url);
+      // Populate with just the origin so we scan the whole site, not one page
+      urlInput.value = u.origin + "/";
+    } catch (_) {}
+    // Uncheck after filling — it's a one-shot action, not a persistent lock
+    useCurrentTab.checked = false;
+  });
+});
+
+// ─── Scan mode hint ───────────────────────────────────────────────────────────
+const SCAN_HINTS = {
+  sitemap: "Uses sitemap.xml to find all pages on the site.",
+  nav:     "Only scans pages linked from the main navigation — typically 5–20 pages.",
+};
+scanModeEl.addEventListener("change", () => {
+  scanModeHint.textContent = SCAN_HINTS[scanModeEl.value];
 });
 
 // ─── Search button ────────────────────────────────────────────────────────────
@@ -58,6 +88,7 @@ function startSearch() {
   }
 
   const matchType = matchTypeEl.value;
+  const scanMode  = scanModeEl.value;
   lastTerm = term;
   lastDomain = new URL(rootUrl).hostname.replace(/^www\./, "");
   currentResults = [];
@@ -83,8 +114,20 @@ function startSearch() {
 
   port.onDisconnect.addListener(() => { port = null; });
 
-  port.postMessage({ type: "START_SEARCH", payload: { rootUrl, term, matchType } });
+  port.postMessage({ type: "START_SEARCH", payload: { rootUrl, term, matchType, scanMode } });
 }
+
+// ─── Cancel button ────────────────────────────────────────────────────────────
+cancelBtn.addEventListener("click", () => {
+  if (port) { try { port.disconnect(); } catch (_) {} port = null; }
+  searchBtn.disabled = false;
+  searchBtn.textContent = "Search";
+  hide(progressSection);
+  // Show whatever partial results arrived before cancel
+  if (currentResults.length) {
+    renderResults(currentResults, lastTerm);
+  }
+});
 
 function handleProgress({ message, checked, total }) {
   progressText.textContent = message;
@@ -174,45 +217,76 @@ function highlightTerm(escapedText, escapedTerm) {
   return escapedText.replace(pattern, (m) => `<mark>${m}</mark>`);
 }
 
-// ─── Open in Google Sheets ────────────────────────────────────────────────────
-// Copies TSV to clipboard (pastes perfectly into Sheets) and opens a new Sheet.
+// ─── Open in Google Sheets (Sheets API) ──────────────────────────────────────
 sheetsBtn.addEventListener("click", async () => {
   if (!currentResults.length) return;
 
+  sheetsBtn.disabled = true;
+  sheetsBtn.textContent = "Creating sheet…";
+
+  try {
+    const token = await getGoogleToken();
+    const title = `${lastDomain} — WordSearch`;
+    const spreadsheetId = await createSpreadsheet(token, title);
+    await populateSpreadsheet(token, spreadsheetId, currentResults);
+    chrome.tabs.create({ url: `https://docs.google.com/spreadsheets/d/${spreadsheetId}` });
+  } catch (e) {
+    showError(`Sheets export failed: ${e.message}`);
+  } finally {
+    sheetsBtn.disabled = false;
+    sheetsBtn.textContent = "Open in Sheets";
+  }
+});
+
+function getGoogleToken() {
+  return new Promise((resolve, reject) => {
+    chrome.identity.getAuthToken({ interactive: true }, (token) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(token);
+      }
+    });
+  });
+}
+
+async function createSpreadsheet(token, title) {
+  const resp = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ properties: { title } }),
+  });
+  if (!resp.ok) throw new Error(`Could not create sheet (${resp.status})`);
+  const data = await resp.json();
+  return data.spreadsheetId;
+}
+
+async function populateSpreadsheet(token, spreadsheetId, results) {
   const headers = ["Page Title", "URL", "Match Count", "First Snippet"];
-  const rows = currentResults.map((r) => [
+  const rows = results.map((r) => [
     r.title,
     r.url,
     r.count,
     r.snippets[0] || "",
   ]);
+  const values = [headers, ...rows];
 
-  const tsv = [headers, ...rows]
-    .map((row) => row.map((cell) => String(cell).replace(/\t/g, " ").replace(/\n/g, " ")).join("\t"))
-    .join("\n");
-
-  try {
-    await navigator.clipboard.writeText(tsv);
-  } catch (_) {
-    // Fallback for any clipboard permission edge cases
-    const ta = document.createElement("textarea");
-    ta.value = tsv;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-  }
-
-  // Open a new Sheet pre-titled with the domain name
-  const sheetTitle = encodeURIComponent(`${lastDomain} — WordSearch`);
-  chrome.tabs.create({ url: `https://docs.google.com/spreadsheets/create?title=${sheetTitle}` });
-
-  // Show paste reminder
-  show(sheetsToast);
-  setTimeout(() => hide(sheetsToast), 6000);
-});
+  const resp = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=RAW`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ values }),
+    }
+  );
+  if (!resp.ok) throw new Error(`Could not populate sheet (${resp.status})`);
+}
 
 // ─── CSV export ───────────────────────────────────────────────────────────────
 exportBtn.addEventListener("click", () => {
@@ -254,6 +328,7 @@ function persistResults() {
     domain: lastDomain,
     url: urlInput.value.trim(),
     matchType: matchTypeEl.value,
+    scanMode: scanModeEl.value,
   });
 }
 
@@ -261,7 +336,6 @@ function persistResults() {
 function resetUI() {
   hide(resultsSection);
   hide(exportActions);
-  hide(sheetsToast);
   hide(emptyState);
   hide(errorState);
   resultsList.innerHTML = "";
