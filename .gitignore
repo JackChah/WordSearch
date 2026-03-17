@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Cursor / VS Code
+.cursor/
+.vscode/
+
+# Node (if you ever add a build step)
+node_modules/
+npm-debug.log*
+
+# Chrome extension build artifacts
+*.crx
+*.pem
+*.zip
+
+# Env / secrets (never commit these)
+.env
+.env.*
+secrets.*
+
+# Python cache (from icon generation scripts)
+__pycache__/
+*.pyc

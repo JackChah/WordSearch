@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "WordSearch — Site-Wide Text Finder",
+  "version": "1.0.0",
+  "description": "Scan any website for a word or phrase across all linked pages. Free alternative to Screaming Frog for copy audits.",
+
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "tabs",
+    "clipboardWrite"
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src *;"
+  },
+
+  "host_permissions": [
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+
+  "action": {
+    "default_title": "WordSearch"
+  },
+
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

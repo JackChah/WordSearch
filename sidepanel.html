@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WordSearch</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <header class="app-header">
+      <h1 class="app-title">WordSearch</h1>
+      <p class="app-subtitle">Find any word or phrase across an entire site</p>
+    </header>
+
+    <main class="app-body">
+
+      <!-- ── Inputs ── -->
+      <div class="field">
+        <label for="url-input">Website URL</label>
+        <input
+          id="url-input"
+          type="url"
+          placeholder="https://example.com"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="field">
+        <label for="term-input">Search term</label>
+        <input
+          id="term-input"
+          type="text"
+          placeholder="e.g. old brand name"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="field">
+        <label for="match-type">Match type</label>
+        <select id="match-type">
+          <option value="case-insensitive">Case-insensitive (whole word)</option>
+          <option value="exact">Exact (case-sensitive, whole word)</option>
+          <option value="partial">Partial (matches inside words)</option>
+        </select>
+      </div>
+
+      <button id="search-btn" class="btn-primary">Search</button>
+
+      <!-- ── Progress ── -->
+      <div id="progress-section" class="progress-section hidden">
+        <div class="progress-bar-wrap">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <p id="progress-text" class="progress-text">Starting…</p>
+      </div>
+
+      <!-- ── Results ── -->
+      <div id="results-section" class="results-section hidden">
+
+        <div class="results-header">
+          <p id="results-summary" class="results-summary"></p>
+          <div id="export-actions" class="export-actions hidden">
+            <button id="sheets-btn" class="btn-sheets" title="Copies data, opens a new Google Sheet — just paste">Open in Sheets</button>
+            <button id="export-btn" class="btn-export">CSV</button>
+          </div>
+        </div>
+
+        <div id="sheets-toast" class="sheets-toast hidden">Copied! Paste into the new Sheet (Ctrl+V / ⌘V)</div>
+
+        <div id="results-list" class="results-list"></div>
+
+      </div>
+
+      <!-- ── Empty state ── -->
+      <div id="empty-state" class="empty-state hidden">
+        <p>No matches found for that term.</p>
+      </div>
+
+      <!-- ── Error state ── -->
+      <div id="error-state" class="error-state hidden">
+        <p id="error-message"></p>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
